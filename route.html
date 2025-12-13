@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Route Details</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+      <link rel="shortcut icon" href="https://kavyaschool.edu.np/favicon.ico" type="image/x-icon">
+</head>
+
+<body class="bg-slate-100 min-h-screen p-6">
+
+<a href="index.html" class="text-blue-600 text-sm mb-4 inline-block">
+← Back to Home
+</a>
+
+<div id="routeBox" class="max-w-2xl mx-auto bg-white rounded-2xl shadow p-6"></div>
+
+<script>
+fetch("index.json")
+  .then(r => r.json())
+  .then(data => {
+    const id = new URLSearchParams(location.search).get("id");
+    const r = data[id];
+
+    document.getElementById("routeBox").innerHTML = `
+      <p class="text-slate-500 text-sm">The best route for you is</p>
+      <h1 class="text-2xl font-bold mb-6">
+        Route-${id}: ${r.route_name}
+      </h1>
+
+      <div class="grid grid-cols-2 gap-4 text-sm">
+        <div class="bg-slate-50 p-4 rounded-xl">
+          <p class="text-slate-500">Driver</p>
+          <p class="font-semibold">${r.driver_name}</p>
+        </div>
+
+        <div class="bg-slate-50 p-4 rounded-xl">
+          <p class="text-slate-500">Contact</p>
+          <p class="font-semibold">${r.driver_contact}</p>
+        </div>
+      </div>
+
+      <div class="mt-6">
+        <p class="font-semibold mb-2">Pickup Stops</p>
+        <div class="border rounded-xl divide-y">
+          ${r.pickup_locations.map(l => `
+            <div class="px-4 py-3">${l.name}</div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  });
+</script>
+
+</body>
+</html>
