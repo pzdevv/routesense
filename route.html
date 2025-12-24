@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Route Details - Kavya Shuttle</title>
+  <title>Route Details - Route Sense</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="shortcut icon" href="https://kavyaschool.edu.np/favicon.ico">
@@ -51,7 +51,6 @@ fetch("index.json")
       return;
     }
 
-    // Process school contacts into clickable links
     const schoolContactsHtml = r.school_contact.split(',').map(num => {
       const trimmedNum = num.trim();
       return `<a href="tel:${trimmedNum}" class="text-slate-900 font-bold hover:text-blue-600 hover:underline transition-colors">${trimmedNum}</a>`;
@@ -86,9 +85,19 @@ fetch("index.json")
         </div>
 
         <div class="space-y-6">
-          <h2 class="text-2xl font-black text-slate-900 flex items-center gap-2">
-             <i data-lucide="map-pin" class="text-red-500 w-6 h-6"></i> Scheduled Stops
-          </h2>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 class="text-2xl font-black text-slate-900 flex items-center gap-2">
+               <i data-lucide="map-pin" class="text-red-500 w-6 h-6"></i> Scheduled Stops
+            </h2>
+            
+            <button onclick="navigateToNearestStop()" class="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-blue-200">
+              <i data-lucide="navigation" class="w-4 h-4"></i>
+              Navigate to Nearest Stop
+            </button>
+          </div>
+
+          <div id="navError" class="hidden p-3 bg-red-50 border border-red-100 text-red-600 text-sm font-medium rounded-xl"></div>
+
           <div class="bg-white border-2 border-slate-50 rounded-3xl divide-y-2 divide-slate-50 overflow-hidden shadow-sm">
             ${r.pickup_locations.map((l, index) => `
               <div class="px-6 py-5 hover:bg-slate-50 transition-colors flex items-center gap-4">
@@ -100,7 +109,6 @@ fetch("index.json")
         </div>
 
         <div class="pt-8 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          
           <div class="flex items-center gap-3">
             <div class="p-2 bg-slate-100 rounded-lg text-slate-500">
               <i data-lucide="building" class="w-5 h-5"></i>
@@ -119,17 +127,79 @@ fetch("index.json")
       </div>
     `;
     lucide.createIcons();
+
+    // Global function for navigation feature
+    window.navigateToNearestStop = function() {
+      const errorDiv = document.getElementById('navError');
+      errorDiv.classList.add('hidden');
+
+      if (!navigator.geolocation) {
+        showNavError("Geolocation is not supported by your browser.");
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userLat = position.coords.latitude;
+          const userLon = position.coords.longitude;
+          
+          let nearestStop = null;
+          let minDistance = Infinity;
+
+          r.pickup_locations.forEach(loc => {
+            const dist = calculateDistance(userLat, userLon, parseFloat(loc.latitude), parseFloat(loc.longitude));
+            if (dist < minDistance) {
+              minDistance = dist;
+              nearestStop = loc;
+            }
+          });
+
+          if (nearestStop) {
+            // Using a 10km radius as a "reasonable" limit for shuttle stop search
+            if (minDistance > 10) {
+              showNavError("No shuttle stops found near your current location.");
+              return;
+            }
+            
+            // Open navigation in default maps app (Google/Apple Maps)
+            const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${nearestStop.latitude},${nearestStop.longitude}&travelmode=driving`;
+            window.open(mapUrl, '_blank');
+          }
+        },
+        (error) => {
+          showNavError("Turn on location to navigate to the nearest stop.");
+        }
+      );
+    };
+
+    function showNavError(msg) {
+      const errorDiv = document.getElementById('navError');
+      errorDiv.innerText = msg;
+      errorDiv.classList.remove('hidden');
+    }
+
+    // Haversine formula to calculate distance in KM
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; 
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
   })
   .catch((err) => {
     console.error(err);
-    document.getElementById("routeBox").innerHTML = `
-      <div class="text-center py-12 text-red-500">
-        <i data-lucide="wifi-off" class="w-12 h-12 mx-auto mb-4"></i>
-        <p class="font-bold">Error loading route data. Please check your connection.</p>
-      </div>
-    `;
-    lucide.createIcons();
+    document.getElementById("routeBox").innerHTML = `<p class="text-center text-red-500 font-bold">Error loading route.</p>`;
   });
 </script>
 </body>
+<footer class="py-12 text-center text-slate-400 font-medium">
+  Made with <span class="text-red-500">❤</span> by 
+  <span class="kavya-text text-sm">
+    <span class="k-orange">K</span><span class="a-red">a</span><span class="v-blue">v</span><span class="y-green">y</span><span class="a-slate">a</span>
+  </span> Students
+</footer>
 </html>
